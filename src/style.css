@@ -1,0 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Thrive Nutrition Studio inspired color palette */
+  --primary-green: #7A8B57;
+  --primary-green-light: #9BA678;
+  --primary-green-dark: #5C6B42;
+  --accent-sage: #A4B494;
+  --accent-coral: #F18A76;
+  --neutral-cream: #FAF9F7;
+  --neutral-warm-white: #FFFFFF;
+  --neutral-light-gray: #F5F4F2;
+  --neutral-medium-gray: #E6E4E0;
+  --neutral-dark-gray: #8B8680;
+  --neutral-charcoal: #2C2A26;
+  --text-primary: #2C2A26;
+  --text-secondary: #5C5A54;
+  --text-light: #8B8680;
+  
+  /* Typography */
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  
+  /* Base styles */
+  font-family: var(--font-primary);
+  line-height: 1.6;
+  font-weight: 400;
+  color: var(--text-primary);
+  background-color: var(--neutral-cream);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--neutral-cream);
+  color: var(--text-primary);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+}
+
+h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
+}
+
+h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+h3 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+p {
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin: 0 0 1rem 0;
+}
+
+/* Links */
+a {
+  color: var(--primary-green);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+a:hover {
+  color: var(--primary-green-dark);
+}
+
+/* Buttons */
+button, .btn {
+  font-family: var(--font-primary);
+  font-weight: 600;
+  border: none;
+  border-radius: 50px;
+  padding: 16px 32px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  letter-spacing: 0.025em;
+}
+
+.btn-primary {
+  background-color: var(--primary-green);
+  color: var(--neutral-warm-white);
+  box-shadow: 0 4px 12px rgba(122, 139, 87, 0.25);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-green-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(122, 139, 87, 0.35);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--primary-green);
+  border: 2px solid var(--primary-green);
+}
+
+.btn-secondary:hover {
+  background-color: var(--primary-green);
+  color: var(--neutral-warm-white);
+  transform: translateY(-2px);
+}
+
+/* Layout utilities */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.card {
+  background: var(--neutral-warm-white);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 24px rgba(44, 42, 38, 0.08);
+  border: 1px solid var(--neutral-medium-gray);
+}
+
+#app {
+  width: 100%;
+  margin: 0 auto;
+  background-color: var(--neutral-cream);
+}
+
+/* Spacing utilities */
+.section-padding {
+  padding: 80px 0;
+}
+
+.mb-small { margin-bottom: 1rem; }
+.mb-medium { margin-bottom: 2rem; }
+.mb-large { margin-bottom: 3rem; }
+
+/* Text utilities */
+.text-center { text-align: center; }
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-light { color: var(--text-light); }
+
+.font-display { font-family: var(--font-display); }
+.font-primary { font-family: var(--font-primary); }
+
+/* Focus states for accessibility */
+button:focus,
+.btn:focus,
+a:focus {
+  outline: 2px solid var(--primary-green);
+  outline-offset: 2px;
+}
