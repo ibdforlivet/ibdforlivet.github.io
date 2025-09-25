@@ -108,14 +108,26 @@
           </div>
 
           <div class="form-group">
-            <label for="image">Image Path</label>
-            <input
-              id="image"
-              v-model="recipeForm.image"
-              type="text"
-              class="form-input"
-              placeholder="e.g., /assets/recipes/recipe-image.jpg"
-            />
+            <label for="image">Recipe Image</label>
+            <div class="image-upload-section">
+              <input
+                id="imageFile"
+                type="file"
+                accept="image/*"
+                @change="handleImageUpload"
+                class="form-input"
+                ref="imageInput"
+              />
+              <div v-if="imageUploading" class="upload-progress">
+                Uploading image... Please wait.
+              </div>
+              <div v-if="recipeForm.image" class="image-preview">
+                <img :src="recipeForm.image" alt="Recipe preview" class="preview-img" />
+                <button type="button" @click="removeImage" class="remove-image-btn">
+                  Remove Image
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Ingredients -->
@@ -199,7 +211,7 @@
             <p class="recipe-description">{{ recipe.description }}</p>
             <div class="recipe-actions">
               <button @click="editRecipe(recipe)" class="edit-btn">Edit</button>
-              <button @click="deleteRecipe(recipe.id)" class="delete-btn">Delete</button>
+              <button @click="deleteRecipe(recipe)" class="delete-btn">Delete</button>
             </div>
           </div>
         </div>
@@ -222,7 +234,13 @@
 </template>
 
 <script>
-import { recipes as initialRecipes } from '../data/recipesData'
+import { 
+  getRecipes, 
+  addRecipe, 
+  updateRecipe, 
+  deleteRecipe, 
+  uploadRecipeImage 
+} from '../firebase/recipeService.js'
 
 export default {
   name: 'AdminDashboard',
@@ -230,6 +248,8 @@ export default {
     return {
       recipes: [],
       editingRecipe: null,
+      loading: false,
+      imageUploading: false,
       recipeForm: {
         name: '',
         description: '',
@@ -256,8 +276,31 @@ export default {
       localStorage.removeItem('adminLoginTime')
       this.$router.push('/admin/login')
     },
+
+    async handleImageUpload(event) {
+      const file = event.target.files[0]
+      if (!file) return
+
+      this.imageUploading = true
+      try {
+        // Generate temporary ID for new recipes
+        const tempId = this.editingRecipe?.id || `temp_${Date.now()}`
+        const imageUrl = await uploadRecipeImage(file, tempId)
+        this.recipeForm.image = imageUrl
+        this.$refs.imageInput.value = '' // Clear file input
+      } catch (error) {
+        alert('Error uploading image: ' + error.message)
+      } finally {
+        this.imageUploading = false
+      }
+    },
+
+    removeImage() {
+      this.recipeForm.image = ''
+      this.$refs.imageInput.value = ''
+    },
     
-    saveRecipe() {
+    async saveRecipe() {
       // Clean up empty ingredients and instructions
       const cleanedIngredients = this.recipeForm.ingredients.filter(i => i.trim())
       const cleanedInstructions = this.recipeForm.instructions.filter(i => i.trim())
@@ -273,21 +316,25 @@ export default {
         instructions: cleanedInstructions
       }
 
-      if (this.editingRecipe) {
-        // Update existing recipe
-        const index = this.recipes.findIndex(r => r.id === this.editingRecipe.id)
-        if (index !== -1) {
-          this.recipes[index] = { ...recipeData, id: this.editingRecipe.id }
+      this.loading = true
+      try {
+        if (this.editingRecipe) {
+          // Update existing recipe
+          await updateRecipe(this.editingRecipe.id, recipeData)
+          alert('Recipe updated successfully!')
+        } else {
+          // Add new recipe
+          await addRecipe(recipeData)
+          alert('Recipe added successfully!')
         }
-        this.editingRecipe = null
-      } else {
-        // Add new recipe
-        const newId = Math.max(...this.recipes.map(r => r.id), 0) + 1
-        this.recipes.push({ ...recipeData, id: newId })
-      }
 
-      this.resetForm()
-      this.saveToLocalStorage()
+        await this.loadRecipes()
+        this.resetForm()
+      } catch (error) {
+        alert('Error saving recipe: ' + error.message)
+      } finally {
+        this.loading = false
+      }
     },
 
     editRecipe(recipe) {
@@ -299,10 +346,18 @@ export default {
       }
     },
 
-    deleteRecipe(id) {
+    async deleteRecipe(recipe) {
       if (confirm('Are you sure you want to delete this recipe?')) {
-        this.recipes = this.recipes.filter(r => r.id !== id)
-        this.saveToLocalStorage()
+        this.loading = true
+        try {
+          await deleteRecipe(recipe.id, recipe.image)
+          alert('Recipe deleted successfully!')
+          await this.loadRecipes()
+        } catch (error) {
+          alert('Error deleting recipe: ' + error.message)
+        } finally {
+          this.loading = false
+        }
       }
     },
 
@@ -339,16 +394,15 @@ export default {
       this.recipeForm.instructions.splice(index, 1)
     },
 
-    saveToLocalStorage() {
-      localStorage.setItem('adminRecipes', JSON.stringify(this.recipes))
-    },
-
-    loadFromLocalStorage() {
-      const saved = localStorage.getItem('adminRecipes')
-      if (saved) {
-        this.recipes = JSON.parse(saved)
-      } else {
-        this.recipes = [...initialRecipes]
+    async loadRecipes() {
+      this.loading = true
+      try {
+        this.recipes = await getRecipes()
+      } catch (error) {
+        alert('Error loading recipes: ' + error.message)
+        this.recipes = []
+      } finally {
+        this.loading = false
       }
     },
 
@@ -369,7 +423,7 @@ export default {
     }
   },
 
-  mounted() {
+  async mounted() {
     // Check if user is logged in
     const isLoggedIn = localStorage.getItem('adminLoggedIn')
     const loginTime = localStorage.getItem('adminLoginTime')
@@ -380,7 +434,7 @@ export default {
       return
     }
 
-    this.loadFromLocalStorage()
+    await this.loadRecipes()
   }
 }
 </script>
@@ -631,5 +685,48 @@ code {
   padding: 0.2rem 0.4rem;
   border-radius: 3px;
   font-family: 'Courier New', monospace;
+}
+
+.image-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.upload-progress {
+  color: #667eea;
+  font-style: italic;
+  padding: 0.5rem;
+  background: #f0f8ff;
+  border-radius: 5px;
+}
+
+.image-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.preview-img {
+  max-width: 200px;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.remove-image-btn {
+  background: #e74c3c;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.remove-image-btn:hover {
+  background: #c0392b;
 }
 </style>
