@@ -9,7 +9,7 @@ export const recipes = [
     "servings": 4,
     "difficulty": "Medium",
     "featured": true,
-    "image": "/assets/recipes/IMG_8919.PNG",
+    "image": "/assets/recipes/IMG_8919.png",
     "ingredients": [
       "400g spaghetti",
       "200g pancetta, diced",
@@ -72,7 +72,7 @@ export const recipes = [
     "servings": 4,
     "difficulty": "Easy",
     "featured": true,
-    "image": "/assets/recipes/IMG_9092.JPG",
+    "image": "/assets/recipes/IMG_9092.jpeg",
     "ingredients": [
       "2 heads romaine lettuce, chopped",
       "1/2 cup mayonnaise",
