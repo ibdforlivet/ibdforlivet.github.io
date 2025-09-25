@@ -25,7 +25,31 @@
           <div class="recipe-tags">
             <span class="recipe-time">{{ recipe.cookTime }}</span>
             <span class="recipe-difficulty">{{ recipe.difficulty }}</span>
-            <span v-if="showCategory" class="recipe-category">{{ recipe.category }}</span>
+            <!-- Handle multiple categories -->
+            <template v-if="showCategory">
+              <span 
+                v-if="Array.isArray(recipe.categories)" 
+                v-for="category in recipe.categories.slice(0, 2)" 
+                :key="category"
+                class="recipe-category"
+                :style="{ backgroundColor: getCategoryColor(category) }"
+              >
+                {{ category }}
+              </span>
+              <span 
+                v-else-if="recipe.category"
+                class="recipe-category"
+                :style="{ backgroundColor: getCategoryColor(recipe.category) }"
+              >
+                {{ recipe.category }}
+              </span>
+              <span 
+                v-if="Array.isArray(recipe.categories) && recipe.categories.length > 2"
+                class="recipe-category-more"
+              >
+                +{{ recipe.categories.length - 2 }}
+              </span>
+            </template>
           </div>
         </div>
       </div>
@@ -44,7 +68,8 @@
 </template>
 
 <script>
-import { isFavorite, getRecipeSlug, toggleFavorite } from '../data/recipeService.js'
+import { isFavorite, toggleFavorite } from '../data/firebaseRecipeService.js'
+import { getCategories } from '../firebase/recipeService.js'
 
 export default {
   name: 'RecipeCard',
@@ -62,18 +87,40 @@ export default {
       default: false
     }
   },
+  data() {
+    return {
+      categories: []
+    }
+  },
   methods: {
     isFavorite(recipeId) {
       return isFavorite(recipeId)
     },
     handleClick() {
-      const slug = getRecipeSlug(this.recipe.id)
+      // Create slug from recipe name
+      const slug = this.recipe.name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim('-')
       this.$router.push(`/recipe/${slug}`)
     },
     toggleFavoriteStatus() {
       toggleFavorite(this.recipe.id)
       // Force reactivity update
       this.$forceUpdate()
+    },
+    getCategoryColor(categoryName) {
+      const category = this.categories.find(cat => cat.name === categoryName)
+      return category ? category.color || '#667eea' : '#667eea'
+    }
+  },
+  async mounted() {
+    try {
+      this.categories = await getCategories()
+    } catch (error) {
+      console.error('Error loading categories for colors:', error)
     }
   }
 }
@@ -185,6 +232,13 @@ export default {
   letter-spacing: 0.025em;
   border: 1px solid rgba(255, 255, 255, 0.2);
   /* text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); */
+}
+
+.recipe-tags .recipe-category {
+  background: var(--category-color, rgba(255, 255, 255, 0.25));
+  color: white;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .recipe-title-container {

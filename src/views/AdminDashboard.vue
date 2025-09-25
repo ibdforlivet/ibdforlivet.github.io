@@ -6,8 +6,28 @@
     </div>
 
     <div class="admin-content">
-      <!-- Add New Recipe Form -->
-      <div class="recipe-form-section">
+      <!-- Tab Navigation -->
+      <div class="tab-navigation">
+        <button 
+          @click="activeTab = 'recipes'" 
+          :class="{ active: activeTab === 'recipes' }"
+          class="tab-btn"
+        >
+          Manage Recipes
+        </button>
+        <button 
+          @click="activeTab = 'categories'" 
+          :class="{ active: activeTab === 'categories' }"
+          class="tab-btn"
+        >
+          Manage Categories
+        </button>
+      </div>
+
+      <!-- Recipe Management Section -->
+      <div v-if="activeTab === 'recipes'" class="tab-content">
+        <!-- Add New Recipe Form -->
+        <div class="recipe-form-section">
         <h2>{{ editingRecipe ? 'Edit Recipe' : 'Add New Recipe' }}</h2>
         <form @submit.prevent="saveRecipe" class="recipe-form">
           <div class="form-row">
@@ -21,17 +41,35 @@
                 class="form-input"
               />
             </div>
-            <div class="form-group">
-              <label for="category">Category *</label>
-              <input
-                id="category"
-                v-model="recipeForm.category"
-                type="text"
-                required
-                class="form-input"
-                placeholder="e.g., Italian, Mexican, Desserts"
-              />
+                      <div class="form-group">
+            <label>Categories:</label>
+            <div class="categories-checkbox-group">
+              <div 
+                v-for="category in categories" 
+                :key="category.id" 
+                class="category-checkbox-item"
+              >
+                <input 
+                  type="checkbox" 
+                  :id="`category-${category.id}`"
+                  :value="category.name"
+                  v-model="recipeForm.categories"
+                  class="category-checkbox"
+                />
+                <label 
+                  :for="`category-${category.id}`" 
+                  class="category-checkbox-label"
+                  :style="{ borderColor: category.color || '#667eea' }"
+                >
+                  <div 
+                    class="category-color-indicator" 
+                    :style="{ backgroundColor: category.color || '#667eea' }"
+                  ></div>
+                  {{ category.name }}
+                </label>
+              </div>
             </div>
+          </div>
           </div>
 
           <div class="form-group">
@@ -207,7 +245,24 @@
             class="recipe-card"
           >
             <h3>{{ recipe.name }}</h3>
-            <p class="recipe-category">{{ recipe.category }}</p>
+            <div class="recipe-categories">
+              <span 
+                v-if="Array.isArray(recipe.categories)" 
+                v-for="categoryName in recipe.categories" 
+                :key="categoryName"
+                class="recipe-category-tag"
+                :style="{ backgroundColor: getCategoryColor(categoryName) }"
+              >
+                {{ categoryName }}
+              </span>
+              <span 
+                v-else-if="recipe.category"
+                class="recipe-category-tag"
+                :style="{ backgroundColor: getCategoryColor(recipe.category) }"
+              >
+                {{ recipe.category }}
+              </span>
+            </div>
             <p class="recipe-description">{{ recipe.description }}</p>
             <div class="recipe-actions">
               <button @click="editRecipe(recipe)" class="edit-btn">Edit</button>
@@ -229,6 +284,83 @@
         ></textarea>
         <button @click="copyToClipboard" class="copy-btn">Copy to Clipboard</button>
       </div>
+      </div>
+
+      <!-- Category Management Section -->
+      <div v-if="activeTab === 'categories'" class="tab-content">
+        <!-- Add New Category Form -->
+        <div class="category-form-section">
+          <h2>{{ editingCategory ? 'Edit Category' : 'Add New Category' }}</h2>
+          <form @submit.prevent="saveCategory" class="category-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="categoryName">Category Name *</label>
+                <input
+                  id="categoryName"
+                  v-model="categoryForm.name"
+                  type="text"
+                  required
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label for="categoryColor">Color</label>
+                <input
+                  id="categoryColor"
+                  v-model="categoryForm.color"
+                  type="color"
+                  class="form-input color-input"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="categoryDescription">Description</label>
+              <textarea
+                id="categoryDescription"
+                v-model="categoryForm.description"
+                class="form-textarea"
+                rows="2"
+                placeholder="Optional description for this category"
+              ></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="submit-btn" :disabled="loading">
+                {{ editingCategory ? 'Update Category' : 'Add Category' }}
+              </button>
+              <button v-if="editingCategory" @click="resetCategoryForm" type="button" class="cancel-btn">
+                Cancel Edit
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Category List -->
+        <div class="category-list-section">
+          <h2>Existing Categories</h2>
+          <div class="category-grid">
+            <div
+              v-for="category in categories"
+              :key="category.id"
+              class="category-card"
+            >
+              <div class="category-header">
+                <div class="category-color" :style="{ backgroundColor: category.color || '#667eea' }"></div>
+                <h3>{{ category.name }}</h3>
+              </div>
+              <p v-if="category.description" class="category-description">{{ category.description }}</p>
+              <div class="category-stats">
+                {{ getRecipeCountForCategory(category.name) }} recipes
+              </div>
+              <div class="category-actions">
+                <button @click="editCategory(category)" class="edit-btn">Edit</button>
+                <button @click="deleteCategory(category)" class="delete-btn">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -239,7 +371,11 @@ import {
   addRecipe, 
   updateRecipe, 
   deleteRecipe, 
-  uploadRecipeImage 
+  uploadRecipeImage,
+  getCategories,
+  addCategory,
+  updateCategory,
+  deleteCategory
 } from '../firebase/recipeService.js'
 
 export default {
@@ -247,13 +383,16 @@ export default {
   data() {
     return {
       recipes: [],
+      categories: [],
+      activeTab: 'recipes', // 'recipes' or 'categories'
       editingRecipe: null,
+      editingCategory: null,
       loading: false,
       imageUploading: false,
       recipeForm: {
         name: '',
         description: '',
-        category: '',
+        categories: [],
         prepTime: '',
         cookTime: '',
         servings: 1,
@@ -262,6 +401,11 @@ export default {
         image: '',
         ingredients: [''],
         instructions: ['']
+      },
+      categoryForm: {
+        name: '',
+        description: '',
+        color: '#667eea'
       }
     }
   },
@@ -341,6 +485,9 @@ export default {
       this.editingRecipe = recipe
       this.recipeForm = {
         ...recipe,
+        // Handle backward compatibility: convert single category to array
+        categories: Array.isArray(recipe.categories) ? [...recipe.categories] : 
+                   recipe.category ? [recipe.category] : [],
         ingredients: [...recipe.ingredients],
         instructions: [...recipe.instructions]
       }
@@ -366,7 +513,7 @@ export default {
       this.recipeForm = {
         name: '',
         description: '',
-        category: '',
+        categories: [],
         prepTime: '',
         cookTime: '',
         servings: 1,
@@ -406,6 +553,112 @@ export default {
       }
     },
 
+    async loadCategories() {
+      try {
+        this.categories = await getCategories()
+        console.log('Loaded categories:', this.categories) // Debug log
+      } catch (error) {
+        alert('Error loading categories: ' + error.message)
+        this.categories = []
+      }
+    },
+
+    // Category Management Methods
+    async saveCategory() {
+      if (!this.categoryForm.name.trim()) {
+        alert('Please enter a category name.')
+        return
+      }
+
+      // Ensure color has a value
+      const categoryData = {
+        ...this.categoryForm,
+        color: this.categoryForm.color || '#667eea'
+      }
+
+      console.log('Saving category with data:', categoryData) // Debug log
+
+      this.loading = true
+      try {
+        if (this.editingCategory) {
+          await updateCategory(this.editingCategory.id, categoryData)
+          alert('Category updated successfully!')
+        } else {
+          await addCategory(categoryData)
+          alert('Category added successfully!')
+        }
+
+        await this.loadCategories()
+        this.resetCategoryForm()
+      } catch (error) {
+        alert('Error saving category: ' + error.message)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    editCategory(category) {
+      this.editingCategory = category
+      this.categoryForm = {
+        name: category.name,
+        description: category.description || '',
+        color: category.color || '#667eea'
+      }
+      console.log('Editing category:', category, 'Form color:', this.categoryForm.color) // Debug log
+    },
+
+    async deleteCategory(category) {
+      // Check if category is used by any recipes (handle both old single category and new multiple categories)
+      const recipesUsingCategory = this.recipes.filter(recipe => {
+        if (Array.isArray(recipe.categories)) {
+          return recipe.categories.includes(category.name)
+        } else {
+          return recipe.category === category.name
+        }
+      })
+      if (recipesUsingCategory.length > 0) {
+        alert(`Cannot delete category "${category.name}" as it is used by ${recipesUsingCategory.length} recipe(s). Please update those recipes first.`)
+        return
+      }
+
+      if (confirm(`Are you sure you want to delete the category "${category.name}"?`)) {
+        this.loading = true
+        try {
+          await deleteCategory(category.id)
+          alert('Category deleted successfully!')
+          await this.loadCategories()
+        } catch (error) {
+          alert('Error deleting category: ' + error.message)
+        } finally {
+          this.loading = false
+        }
+      }
+    },
+
+    resetCategoryForm() {
+      this.editingCategory = null
+      this.categoryForm = {
+        name: '',
+        description: '',
+        color: '#667eea'
+      }
+    },
+
+    getRecipeCountForCategory(categoryName) {
+      return this.recipes.filter(recipe => {
+        if (Array.isArray(recipe.categories)) {
+          return recipe.categories.includes(categoryName)
+        } else {
+          return recipe.category === categoryName
+        }
+      }).length
+    },
+
+    getCategoryColor(categoryName) {
+      const category = this.categories.find(cat => cat.name === categoryName)
+      return category ? category.color || '#667eea' : '#667eea'
+    },
+
     async copyToClipboard() {
       try {
         await navigator.clipboard.writeText(this.exportCode)
@@ -435,6 +688,7 @@ export default {
     }
 
     await this.loadRecipes()
+    await this.loadCategories()
   }
 }
 </script>
@@ -728,5 +982,191 @@ code {
 
 .remove-image-btn:hover {
   background: #c0392b;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #e1e8ed;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 1rem 2rem;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+  color: #667eea;
+}
+
+.tab-btn.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  font-weight: 600;
+}
+
+.tab-content {
+  min-height: 400px;
+}
+
+/* Category Management Styles */
+.category-form-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.category-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.color-input {
+  width: 60px !important;
+  height: 40px;
+  padding: 0;
+  border: 2px solid #ddd;
+  cursor: pointer;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.category-card {
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.category-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.category-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #ddd;
+}
+
+.category-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.category-description {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.category-stats {
+  color: #667eea;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.category-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.category-list-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Category Checkbox Styles */
+.categories-checkbox-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.category-checkbox-item {
+  display: flex;
+  align-items: center;
+}
+
+.category-checkbox {
+  display: none;
+}
+
+.category-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  background: white;
+  width: 100%;
+}
+
+.category-checkbox-label:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.category-checkbox:checked + .category-checkbox-label {
+  border-color: #667eea;
+  background: #667eea;
+  color: white;
+}
+
+.category-color-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Recipe Category Tags */
+.recipe-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.recipe-category-tag {
+  padding: 0.25rem 0.75rem;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  color: white;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 </style>

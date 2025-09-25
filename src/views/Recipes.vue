@@ -8,13 +8,69 @@
 
       <section class="filters">
         <div class="filters-left">
-          <div class="filter-dropdown">
-            <select id="category" v-model="selectedCategory" @change="filterRecipes">
-              <option value="">All Categories</option>
-              <option v-for="category in categories" :key="category" :value="category">
-                {{ category }}
-              </option>
-            </select>
+          <div class="custom-dropdown" ref="categoryDropdown">
+            <div 
+              class="dropdown-trigger"
+              @click="toggleDropdown"
+              :class="{ 'active': isDropdownOpen }"
+            >
+              <div class="selected-categories">
+                <span v-if="selectedCategories.length === 0" class="placeholder">
+                  All Categories
+                </span>
+                <span v-else class="selection-count">
+                  {{ selectedCategories.length === 1 ? '1 category selected' : `${selectedCategories.length} categories selected` }}
+                </span>
+              </div>
+              <div class="dropdown-arrow" :class="{ 'rotated': isDropdownOpen }">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+              </div>
+            </div>
+
+            <div 
+              v-if="isDropdownOpen" 
+              class="dropdown-menu"
+              @click.stop
+            >
+              <div class="dropdown-header">
+                <span class="dropdown-title">Select Categories</span>
+                <button 
+                  v-if="selectedCategories.length > 0"
+                  @click="clearAllCategories"
+                  class="clear-all-btn"
+                >
+                  Clear All
+                </button>
+              </div>
+              
+              <div class="dropdown-options">
+                <div 
+                  v-for="category in categories" 
+                  :key="category"
+                  class="dropdown-option"
+                  @click="toggleCategory(category)"
+                >
+                  <div class="option-content">
+                    <div 
+                      class="category-color-dot"
+                      :style="{ backgroundColor: getCategoryColor(category) }"
+                    ></div>
+                    <span class="category-name">{{ category }}</span>
+                  </div>
+                  <div class="checkbox-container">
+                    <input 
+                      type="checkbox" 
+                      :checked="selectedCategories.includes(category)"
+                      class="category-checkbox"
+                      readonly
+                    >
+                    <div class="custom-checkbox"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="filter-search">
@@ -23,7 +79,7 @@
               type="text" 
               v-model="searchTerm" 
               @input="filterRecipes"
-              placeholder="Search recipes..."
+              placeholder="Search recipes, categories, ingredients..."
             />
           </div>
         </div>
@@ -48,7 +104,19 @@
       </section>
 
       <section class="recipes-grid">
-        <transition-group name="recipe-filter" tag="div" class="recipe-grid-container">
+        <div v-if="loading" class="loading-state">
+          <p>Loading delicious recipes...</p>
+        </div>
+        
+        <div v-else-if="recipes.length === 0" class="empty-state">
+          <p>No recipes found. Add some recipes in the admin panel!</p>
+        </div>
+        
+        <div v-else-if="filteredRecipes.length === 0" class="empty-state">
+          <p>No recipes match your current filters. Try adjusting your search.</p>
+        </div>
+        
+        <transition-group v-else name="recipe-filter" tag="div" class="recipe-grid-container">
           <RecipeCard
             v-for="recipe in filteredRecipes" 
             :key="recipe.id"
@@ -63,7 +131,8 @@
 </template>
 
 <script>
-import { getAllRecipes, getFavoriteCount, isFavorite } from '../data/recipeService.js'
+import { getAllRecipes, getFavoriteCount, isFavorite } from '../data/firebaseRecipeService.js'
+import { getCategories } from '../firebase/recipeService.js'
 import RecipeCard from '../components/RecipeCard.vue'
 
 export default {
@@ -75,15 +144,26 @@ export default {
     return {
       pageTitle: 'Recipe Collection',
       subtitle: 'Discover delicious recipes for every occasion',
-      selectedCategory: '',
+      selectedCategories: [],
       searchTerm: '',
       showFavoritesOnly: false,
-      recipes: []
+      recipes: [],
+      loading: true,
+      categoryData: [],
+      isDropdownOpen: false
     }
   },
   computed: {
     categories() {
-      return [...new Set(this.recipes.map(recipe => recipe.category))]
+      const allCategories = []
+      this.recipes.forEach(recipe => {
+        if (Array.isArray(recipe.categories)) {
+          allCategories.push(...recipe.categories)
+        } else if (recipe.category) {
+          allCategories.push(recipe.category)
+        }
+      })
+      return [...new Set(allCategories)].sort()
     },
     favoriteCount() {
       return getFavoriteCount()
@@ -95,16 +175,46 @@ export default {
         filtered = filtered.filter(recipe => isFavorite(recipe.id))
       }
 
-      if (this.selectedCategory) {
-        filtered = filtered.filter(recipe => recipe.category === this.selectedCategory)
+      if (this.selectedCategories.length > 0) {
+        filtered = filtered.filter(recipe => {
+          const recipeCategories = Array.isArray(recipe.categories) 
+            ? recipe.categories 
+            : recipe.category ? [recipe.category] : []
+          
+          // Check if recipe has ANY of the selected categories (OR logic)
+          return this.selectedCategories.some(selectedCat => 
+            recipeCategories.includes(selectedCat)
+          )
+        })
       }
 
       if (this.searchTerm) {
         const searchLower = this.searchTerm.toLowerCase()
-        filtered = filtered.filter(recipe => 
-          recipe.name.toLowerCase().includes(searchLower) ||
-          recipe.description.toLowerCase().includes(searchLower)
-        )
+        filtered = filtered.filter(recipe => {
+          // Search in recipe name and description
+          const nameMatch = recipe.name.toLowerCase().includes(searchLower)
+          const descMatch = recipe.description.toLowerCase().includes(searchLower)
+          
+          // Search in categories (handle both single category and multiple categories)
+          let categoryMatch = false
+          if (Array.isArray(recipe.categories)) {
+            categoryMatch = recipe.categories.some(cat => 
+              cat.toLowerCase().includes(searchLower)
+            )
+          } else if (recipe.category) {
+            categoryMatch = recipe.category.toLowerCase().includes(searchLower)
+          }
+          
+          // Search in ingredients if they exist
+          let ingredientMatch = false
+          if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
+            ingredientMatch = recipe.ingredients.some(ingredient => 
+              ingredient.toLowerCase().includes(searchLower)
+            )
+          }
+          
+          return nameMatch || descMatch || categoryMatch || ingredientMatch
+        })
       }
 
       return filtered
@@ -114,11 +224,50 @@ export default {
     filterRecipes() {
       // This method is called when filters change
       // The computed property handles the actual filtering
+    },
+    getCategoryColor(categoryName) {
+      const category = this.categoryData.find(cat => cat.name === categoryName)
+      return category ? category.color || '#667eea' : '#667eea'
+    },
+    toggleDropdown() {
+      this.isDropdownOpen = !this.isDropdownOpen
+    },
+    toggleCategory(category) {
+      const index = this.selectedCategories.indexOf(category)
+      if (index > -1) {
+        this.selectedCategories.splice(index, 1)
+      } else {
+        this.selectedCategories.push(category)
+      }
+      this.filterRecipes()
+    },
+    clearAllCategories() {
+      this.selectedCategories = []
+      this.filterRecipes()
+    },
+    handleClickOutside(event) {
+      if (this.$refs.categoryDropdown && !this.$refs.categoryDropdown.contains(event.target)) {
+        this.isDropdownOpen = false
+      }
     }
   },
-  mounted() {
-    this.recipes = getAllRecipes()
-    console.log('Recipes page mounted')
+  async mounted() {
+    try {
+      this.recipes = await getAllRecipes()
+      this.categoryData = await getCategories()
+      console.log('Recipes loaded:', this.recipes.length)
+    } catch (error) {
+      console.error('Error loading recipes:', error)
+    } finally {
+      this.loading = false
+    }
+    
+    // Add click outside listener
+    document.addEventListener('click', this.handleClickOutside)
+  },
+  beforeUnmount() {
+    // Remove click outside listener
+    document.removeEventListener('click', this.handleClickOutside)
   }
 }
 </script>
@@ -213,6 +362,181 @@ export default {
 .filter-search input::placeholder {
   color: var(--neutral-dark-gray);
   opacity: 0.7;
+}
+
+/* Custom Multi-Select Dropdown */
+.custom-dropdown {
+  position: relative;
+  min-width: 280px;
+}
+
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.5rem;
+  border: 2px solid var(--neutral-medium-gray);
+  border-radius: 28px;
+  background-color: var(--neutral-warm-white);
+  color: var(--neutral-charcoal);
+  font-family: var(--font-body);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(44, 42, 38, 0.06);
+}
+
+.dropdown-trigger:hover,
+.dropdown-trigger.active {
+  border-color: var(--primary-green);
+  box-shadow: 0 4px 16px rgba(122, 139, 87, 0.15);
+  transform: translateY(-1px);
+}
+
+.selected-categories {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.placeholder {
+  color: var(--neutral-charcoal);
+}
+
+.selection-count {
+  color: var(--primary-green);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.dropdown-arrow {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease;
+  color: var(--neutral-dark-gray);
+}
+
+.dropdown-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--neutral-warm-white);
+  border: 2px solid var(--neutral-medium-gray);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(44, 42, 38, 0.15);
+  z-index: 1000;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--neutral-light-gray);
+}
+
+.dropdown-title {
+  font-weight: 600;
+  color: var(--neutral-charcoal);
+  font-size: 0.9rem;
+}
+
+.clear-all-btn {
+  background: none;
+  border: none;
+  color: var(--primary-green);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.clear-all-btn:hover {
+  background: rgba(122, 139, 87, 0.1);
+}
+
+.dropdown-options {
+  padding: 0.5rem 0;
+}
+
+.dropdown-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-option:hover {
+  background: rgba(122, 139, 87, 0.05);
+}
+
+.option-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.category-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.category-name {
+  font-weight: 500;
+  color: var(--neutral-charcoal);
+}
+
+.checkbox-container {
+  position: relative;
+}
+
+.category-checkbox {
+  opacity: 0;
+  position: absolute;
+}
+
+.custom-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--neutral-medium-gray);
+  border-radius: 4px;
+  background: white;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.dropdown-option:hover .custom-checkbox {
+  border-color: var(--primary-green);
+}
+
+.category-checkbox:checked + .custom-checkbox {
+  background: var(--primary-green);
+  border-color: var(--primary-green);
+}
+
+.category-checkbox:checked + .custom-checkbox::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .favorites-toggle {
@@ -313,6 +637,17 @@ export default {
 /* Ensure smooth repositioning during transitions */
 .recipe-grid-container > * {
   transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.loading-state, .empty-state {
+  text-align: center;
+  padding: 4rem 0;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.loading-state {
+  color: var(--primary-green);
 }
 
 @media (max-width: 768px) {

@@ -16,8 +16,9 @@ import {
 } from 'firebase/storage'
 import { db, storage } from './config.js'
 
-// Recipe collection name
+// Collection names
 const RECIPES_COLLECTION = 'recipes'
+const CATEGORIES_COLLECTION = 'categories'
 
 // Upload image to Firebase Storage
 export const uploadRecipeImage = async (file, recipeId) => {
@@ -130,16 +131,92 @@ export const searchRecipes = async (searchTerm) => {
     const recipes = await getRecipes()
     const lowercaseSearch = searchTerm.toLowerCase()
     
-    return recipes.filter(recipe => 
-      recipe.name.toLowerCase().includes(lowercaseSearch) ||
-      recipe.description.toLowerCase().includes(lowercaseSearch) ||
-      recipe.category.toLowerCase().includes(lowercaseSearch) ||
-      recipe.ingredients.some(ingredient => 
+    return recipes.filter(recipe => {
+      // Search in name and description
+      const nameMatch = recipe.name.toLowerCase().includes(lowercaseSearch)
+      const descMatch = recipe.description.toLowerCase().includes(lowercaseSearch)
+      
+      // Search in categories (handle both single category and multiple categories)
+      let categoryMatch = false
+      if (Array.isArray(recipe.categories)) {
+        categoryMatch = recipe.categories.some(cat => 
+          cat.toLowerCase().includes(lowercaseSearch)
+        )
+      } else if (recipe.category) {
+        categoryMatch = recipe.category.toLowerCase().includes(lowercaseSearch)
+      }
+      
+      // Search in ingredients
+      const ingredientMatch = recipe.ingredients.some(ingredient => 
         ingredient.toLowerCase().includes(lowercaseSearch)
       )
-    )
+      
+      return nameMatch || descMatch || categoryMatch || ingredientMatch
+    })
   } catch (error) {
     console.error('Error searching recipes:', error)
+    throw error
+  }
+}
+
+// === CATEGORY MANAGEMENT ===
+
+// Add new category
+export const addCategory = async (categoryData) => {
+  try {
+    const docRef = await addDoc(collection(db, CATEGORIES_COLLECTION), {
+      ...categoryData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+    return docRef.id
+  } catch (error) {
+    console.error('Error adding category:', error)
+    throw error
+  }
+}
+
+// Get all categories
+export const getCategories = async () => {
+  try {
+    const q = query(collection(db, CATEGORIES_COLLECTION), orderBy('name', 'asc'))
+    const querySnapshot = await getDocs(q)
+    
+    const categories = []
+    querySnapshot.forEach((doc) => {
+      categories.push({
+        id: doc.id,
+        ...doc.data()
+      })
+    })
+    
+    return categories
+  } catch (error) {
+    console.error('Error getting categories:', error)
+    throw error
+  }
+}
+
+// Update category
+export const updateCategory = async (categoryId, categoryData) => {
+  try {
+    const categoryRef = doc(db, CATEGORIES_COLLECTION, categoryId)
+    await updateDoc(categoryRef, {
+      ...categoryData,
+      updatedAt: new Date()
+    })
+  } catch (error) {
+    console.error('Error updating category:', error)
+    throw error
+  }
+}
+
+// Delete category
+export const deleteCategory = async (categoryId) => {
+  try {
+    await deleteDoc(doc(db, CATEGORIES_COLLECTION, categoryId))
+  } catch (error) {
+    console.error('Error deleting category:', error)
     throw error
   }
 }

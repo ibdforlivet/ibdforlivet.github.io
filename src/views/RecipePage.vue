@@ -1,6 +1,12 @@
 <template>
   <div class="recipe-page">
-    <div v-if="recipe">
+    <div v-if="loading" class="loading-container">
+      <div class="loading-state">
+        <p>Loading recipe...</p>
+      </div>
+    </div>
+    
+    <div v-else-if="recipe">
       <!-- Recipe Header -->
       <header class="recipe-header">
         <!-- <div class="container">
@@ -26,7 +32,24 @@
             <p class="recipe-description">{{ recipe.description }}</p>
             
             <div class="recipe-tags">
-              <span class="tag">{{ recipe.category }}</span>
+              <!-- Display multiple categories -->
+              <template v-if="Array.isArray(recipe.categories)">
+                <span 
+                  v-for="category in recipe.categories" 
+                  :key="category"
+                  class="tag category-tag"
+                  :style="{ backgroundColor: getCategoryColor(category) }"
+                >
+                  {{ category }}
+                </span>
+              </template>
+              <span 
+                v-else-if="recipe.category" 
+                class="tag category-tag"
+                :style="{ backgroundColor: getCategoryColor(recipe.category) }"
+              >
+                {{ recipe.category }}
+              </span>
               <span v-if="recipe.featured" class="tag featured">Featured</span>
               <button 
                 @click="toggleRecipeFavorite" 
@@ -131,7 +154,8 @@
 </template>
 
 <script>
-import { getRecipeBySlug, isFavorite, toggleFavorite } from '../data/recipeService.js'
+import { getRecipeBySlug, isFavorite, toggleFavorite } from '../data/firebaseRecipeService.js'
+import { getCategories } from '../firebase/recipeService.js'
 
 export default {
   name: 'RecipePage',
@@ -141,7 +165,9 @@ export default {
       completedIngredients: [],
       completedInstructions: [],
       isRecipeFavorite: false,
-      currentServings: 1
+      currentServings: 1,
+      loading: true,
+      categories: []
     }
   },
   computed: {
@@ -156,15 +182,22 @@ export default {
     }
   },
   methods: {
-    loadRecipe() {
-      const recipeSlug = this.$route.params.slug
-      this.recipe = getRecipeBySlug(recipeSlug)
-      
-      if (!this.recipe) {
-        console.error('Recipe not found:', recipeSlug)
-      } else {
-        this.isRecipeFavorite = isFavorite(this.recipe.id)
-        this.currentServings = this.recipe.servings
+    async loadRecipe() {
+      this.loading = true
+      try {
+        const recipeSlug = this.$route.params.slug
+        this.recipe = await getRecipeBySlug(recipeSlug)
+        
+        if (!this.recipe) {
+          console.error('Recipe not found:', recipeSlug)
+        } else {
+          this.isRecipeFavorite = isFavorite(this.recipe.id)
+          this.currentServings = this.recipe.servings
+        }
+      } catch (error) {
+        console.error('Error loading recipe:', error)
+      } finally {
+        this.loading = false
       }
     },
     scaleIngredient(ingredient, scaleFactor) {
@@ -255,14 +288,23 @@ export default {
         navigator.clipboard.writeText(window.location.href)
         alert('Recipe URL copied to clipboard!')
       }
+    },
+    getCategoryColor(categoryName) {
+      const category = this.categories.find(cat => cat.name === categoryName)
+      return category ? category.color || '#667eea' : '#667eea'
     }
   },
-  mounted() {
-    this.loadRecipe()
+  async mounted() {
+    await this.loadRecipe()
+    try {
+      this.categories = await getCategories()
+    } catch (error) {
+      console.error('Error loading categories for colors:', error)
+    }
   },
   watch: {
-    '$route'() {
-      this.loadRecipe()
+    async '$route'() {
+      await this.loadRecipe()
       this.resetProgress()
     }
   }
@@ -273,6 +315,19 @@ export default {
 .recipe-page {
   min-height: 100vh;
   background-color: var(--neutral-cream);
+}
+
+.loading-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-state {
+  text-align: center;
+  color: var(--primary-green);
+  font-size: 1.2rem;
 }
 
 .container {
@@ -499,6 +554,14 @@ export default {
   font-family: var(--font-body);
   letter-spacing: 0.025em;
   border: 1px solid rgba(122, 139, 87, 0.2);
+}
+
+.tag.category-tag {
+  color: white;
+  border: none;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  background: var(--category-color, var(--accent-sage));
 }
 
 .tag.featured {
@@ -801,7 +864,7 @@ export default {
   }
   
   .intro-content {
-    /* padding: 0 1rem; */
+    padding: 2rem 1rem;
   }
   
   .recipe-intro h1 {
