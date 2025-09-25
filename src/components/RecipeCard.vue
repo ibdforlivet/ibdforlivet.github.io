@@ -6,7 +6,7 @@
     <div class="recipe-image-container">
       <!-- Background Image -->
       <div class="recipe-image">
-        <img v-if="recipe.image && (recipe.image.startsWith('http') || recipe.image.startsWith('/src/'))" :src="recipe.image" :alt="recipe.name" />
+        <img v-if="recipe.image && (recipe.image.startsWith('http') || recipe.image.startsWith('/assets/') || recipe.image.startsWith('/src/'))" :src="recipe.image" :alt="recipe.name" />
         <div v-else class="recipe-emoji-bg">{{ recipe.image }}</div>
       </div>
       

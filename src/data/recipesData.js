@@ -9,7 +9,7 @@ export const recipes = [
     servings: 4,
     difficulty: 'Medium',
     featured: true,
-    image: '/src/assets/recipes/IMG_8919.PNG',
+    image: '/assets/recipes/IMG_8919.PNG',
     ingredients: [
       '400g spaghetti',
       '200g pancetta, diced',
@@ -39,7 +39,7 @@ export const recipes = [
     servings: 6,
     difficulty: 'Medium',
     featured: true,
-    image: '/src/assets/recipes/IMG_9038.jpeg',
+    image: '/assets/recipes/IMG_9038.jpeg',
     ingredients: [
       '1kg chicken breast, cubed',
       '1 cup plain yogurt',
@@ -72,7 +72,7 @@ export const recipes = [
     servings: 4,
     difficulty: 'Easy',
     featured: true,
-    image: '/src/assets/recipes/IMG_9092.JPG',
+    image: '/assets/recipes/IMG_9092.JPG',
     ingredients: [
       '2 heads romaine lettuce, chopped',
       '1/2 cup mayonnaise',
@@ -102,7 +102,7 @@ export const recipes = [
     servings: 24,
     difficulty: 'Easy',
     featured: true,
-    image: '/src/assets/recipes/IMG_9102.jpeg',
+    image: '/assets/recipes/IMG_9102.jpeg',
     ingredients: [
       '2 1/4 cups all-purpose flour',
       '1 tsp baking soda',
@@ -135,7 +135,7 @@ export const recipes = [
     servings: 8,
     difficulty: 'Easy',
     featured: true,
-    image: '/src/assets/recipes/IMG_9135.jpeg',
+    image: '/assets/recipes/IMG_9135.jpeg',
     ingredients: [
       '1 lb ground beef',
       '1 packet taco seasoning',
@@ -167,7 +167,7 @@ export const recipes = [
     servings: 4,
     difficulty: 'Easy',
     featured: true,
-    image: '/src/assets/recipes/IMG_9146.jpeg',
+    image: '/assets/recipes/IMG_9146.jpeg',
     ingredients: [
       '3 large tomatoes, chopped',
       '1 cucumber, sliced',

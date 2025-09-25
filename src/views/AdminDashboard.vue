@@ -114,7 +114,7 @@
               v-model="recipeForm.image"
               type="text"
               class="form-input"
-              placeholder="e.g., /src/assets/recipes/recipe-image.jpg"
+              placeholder="e.g., /assets/recipes/recipe-image.jpg"
             />
           </div>
 
