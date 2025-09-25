@@ -96,12 +96,13 @@ export default {
 }
 
 .recipe-card:hover .recipe-overlay {
-  background: linear-gradient(
+  /* background: linear-gradient(
     to bottom,
     rgba(0, 0, 0, 0.1) 0%,
     rgba(0, 0, 0, 0.3) 50%,
     rgba(0, 0, 0, 0.8) 100%
-  );
+  ); */
+  background: linear-gradient(to bottom, rgb(213 213 213 / 31%) 100%)
 }
 
 .recipe-image-container {
@@ -139,12 +140,13 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
+  /* background: linear-gradient(
     to bottom,
     rgba(0, 0, 0, 0.05) 0%,
     rgba(0, 0, 0, 0.2) 50%,
     rgba(0, 0, 0, 0.7) 100%
-  );
+  ); */
+  background: linear-gradient(to bottom, rgb(213 213 213 / 31%) 100%);
   transition: all 0.4s ease;
   z-index: 1;
 }
@@ -174,15 +176,15 @@ export default {
 .recipe-tags span {
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(10px);
-  color: var(--neutral-warm-white);
+  color: black;
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 400;
   font-family: var(--font-body);
   letter-spacing: 0.025em;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  /* text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); */
 }
 
 .recipe-title-container {

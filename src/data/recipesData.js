@@ -71,7 +71,7 @@ export const recipes = [
     cookTime: '0 mins',
     servings: 4,
     difficulty: 'Easy',
-    featured: false,
+    featured: true,
     image: '/src/assets/recipes/IMG_9092.JPG',
     ingredients: [
       '2 heads romaine lettuce, chopped',
@@ -166,7 +166,7 @@ export const recipes = [
     cookTime: '0 mins',
     servings: 4,
     difficulty: 'Easy',
-    featured: false,
+    featured: true,
     image: '/src/assets/recipes/IMG_9146.jpeg',
     ingredients: [
       '3 large tomatoes, chopped',

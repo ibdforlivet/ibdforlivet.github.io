@@ -67,7 +67,7 @@ export default {
   data() {
     return {
       title: 'Welcome to Recipe Paradise',
-      description: 'Discover amazing recipes, share your culinary creations, and connect with food lovers around the world.',
+      description: 'Lad os sammen finde ud af, hvad der skal ligge på din tallerken.',
       featuredRecipes: []
     }
   },

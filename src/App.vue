@@ -37,7 +37,11 @@
 
     <footer class="footer">
       <div class="footer-container">
-        <p>&copy; 2024 IBD for Livet. Made with 🌿 for healthy living.</p>
+        <p @dblclick="showAdminLink = true">&copy; 2024 IBD for Livet. Made with 🌿 for healthy living.</p>
+        <div v-if="showAdminLink" class="admin-link-container">
+          <router-link to="/admin/login" class="admin-link">🔐 Admin Access</router-link>
+          <button @click="showAdminLink = false" class="hide-admin">✕</button>
+        </div>
         <p class="privacy-notice">
           🔒 Your favorites are stored locally in your browser for your convenience. 
           <button @click="showPrivacyInfo = !showPrivacyInfo" class="privacy-link">
@@ -72,7 +76,8 @@ export default {
   name: 'App',
   data() {
     return {
-      showPrivacyInfo: false
+      showPrivacyInfo: false,
+      showAdminLink: false
     }
   },
   methods: {
@@ -295,6 +300,46 @@ body {
 
 .close-privacy-btn:hover {
   background: #5a6268;
+}
+
+.admin-link-container {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.admin-link {
+  color: var(--accent-sage);
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--accent-sage);
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.admin-link:hover {
+  background: var(--accent-sage);
+  color: var(--neutral-charcoal);
+}
+
+.hide-admin {
+  background: none;
+  border: none;
+  color: var(--neutral-cream);
+  cursor: pointer;
+  font-size: 1.2rem;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.hide-admin:hover {
+  opacity: 1;
 }
 
 /* Page Transition Animations */

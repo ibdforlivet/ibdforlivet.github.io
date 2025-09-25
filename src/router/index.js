@@ -3,6 +3,8 @@ import Home from '../views/Home.vue'
 import About from '../views/About.vue'
 import Recipes from '../views/Recipes.vue'
 import RecipePage from '../views/RecipePage.vue'
+import AdminLogin from '../views/AdminLogin.vue'
+import AdminDashboard from '../views/AdminDashboard.vue'
 
 const routes = [
   {
@@ -24,6 +26,16 @@ const routes = [
     path: '/recipe/:slug',
     name: 'RecipePage',
     component: RecipePage
+  },
+  {
+    path: '/admin/login',
+    name: 'AdminLogin',
+    component: AdminLogin
+  },
+  {
+    path: '/admin/dashboard',
+    name: 'AdminDashboard',
+    component: AdminDashboard
   }
 ]
 
