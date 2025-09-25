@@ -15,7 +15,16 @@
       <div class="container">
         <h2>Featured Recipes</h2>
         <p class="section-subtitle">Try these amazing recipes from our collection</p>
-        <div class="recipe-grid">
+        
+        <div v-if="loading" class="loading-state">
+          <p>Loading delicious recipes...</p>
+        </div>
+        
+        <div v-else-if="featuredRecipes.length === 0" class="empty-state">
+          <p>No featured recipes yet. Check back soon!</p>
+        </div>
+        
+        <div v-else class="recipe-grid">
           <RecipeCard
             v-for="recipe in featuredRecipes" 
             :key="recipe.id"
@@ -25,6 +34,7 @@
             class=""
           />
         </div>
+        
         <div class="more-recipes">
           <router-link to="/recipes" class="btn btn-primary">
             View All Recipes
@@ -56,7 +66,7 @@
 </template>
 
 <script>
-import { getFeaturedRecipes } from '../data/recipeService.js'
+import { getFeaturedRecipesService } from '../data/firebaseRecipeService.js'
 import RecipeCard from '../components/RecipeCard.vue'
 
 export default {
@@ -67,17 +77,23 @@ export default {
   data() {
     return {
       title: 'Welcome to Recipe Paradise',
-      description: 'Lad os sammen finde ud af, hvad der skal ligge på din tallerken.',
-      featuredRecipes: []
+      description: 'Discover amazing recipes, share your culinary creations, and connect with food lovers around the world.',
+      featuredRecipes: [],
+      loading: true
     }
   },
-  mounted() {
-    this.featuredRecipes = getFeaturedRecipes()
-    console.log('Home page mounted')
+  async mounted() {
+    try {
+      this.featuredRecipes = await getFeaturedRecipesService()
+      console.log('Featured recipes loaded:', this.featuredRecipes.length)
+    } catch (error) {
+      console.error('Error loading featured recipes:', error)
+    } finally {
+      this.loading = false
+    }
   }
 }
 </script>
-
 <style scoped>
 .home {
   min-height: 100vh;
@@ -234,5 +250,16 @@ export default {
 
 .more-recipes {
   text-align: center;
+}
+
+.loading-state, .empty-state {
+  text-align: center;
+  padding: 3rem 0;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.loading-state {
+  color: var(--primary-green);
 }
 </style>
