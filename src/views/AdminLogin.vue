@@ -40,8 +40,14 @@ export default {
       this.loading = true
       this.error = ''
       
-      // Simple password check - in a real app, this would be server-side
-      const adminPassword = 'admin123' // Change this to your desired password
+      // Get admin password from environment variable
+      const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD
+      
+      if (!adminPassword) {
+        this.error = 'Admin password not configured. Please contact administrator.'
+        this.loading = false
+        return
+      }
       
       if (this.password === adminPassword) {
         // Store login state in localStorage
