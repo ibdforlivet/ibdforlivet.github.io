@@ -114,6 +114,18 @@ export const toggleFavorite = (recipeId) => {
   return favorites.includes(recipeId)
 }
 
-export const getFavoriteCount = () => {
-  return favorites.length
+export const getFavoriteCount = async () => {
+  // Only count favorites that actually exist in current recipes
+  const recipes = await getCachedRecipes()
+  const validFavorites = favorites.filter(favId => 
+    recipes.some(recipe => recipe.id === favId)
+  )
+  
+  // Clean up invalid favorites from localStorage
+  if (validFavorites.length !== favorites.length) {
+    favorites = validFavorites
+    saveFavorites()
+  }
+  
+  return validFavorites.length
 }
