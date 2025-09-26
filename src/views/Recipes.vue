@@ -166,7 +166,8 @@ export default {
       return [...new Set(allCategories)].sort()
     },
     favoriteCount() {
-      return getFavoriteCount()
+      // Only count favorites that actually exist in current recipes
+      return this.recipes.filter(recipe => isFavorite(recipe.id)).length
     },
     filteredRecipes() {
       let filtered = this.recipes
