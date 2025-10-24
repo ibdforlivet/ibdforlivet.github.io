@@ -12,4 +12,3 @@ node_modules/.vite/deps
 
 # Build output
 dist/
-.env.template
