@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Recipe images
+    match /recipes/{imageName} {
+      // Everyone can read images (public website)
+      allow read: if true;
+      
+      // Only authenticated users can upload/delete images
+      allow write, delete: if request.auth != null;
+      
+      // Additional validation for uploads
+      allow create: if request.auth != null
+                    && request.resource.size < 5 * 1024 * 1024  // Max 5MB
+                    && request.resource.contentType.matches('image/.*'); // Only images
+    }
+    
+    // Deny all other paths by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -4,6 +4,17 @@
       <h2>Admin Login</h2>
       <form @submit.prevent="login" class="login-form">
         <div class="form-group">
+          <label for="email">Email:</label>
+          <input
+            id="email"
+            v-model="email"
+            type="email"
+            placeholder="Enter admin email"
+            required
+            class="form-input"
+          />
+        </div>
+        <div class="form-group">
           <label for="password">Password:</label>
           <input
             id="password"
@@ -26,10 +37,14 @@
 </template>
 
 <script>
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '../firebase/config'
+
 export default {
   name: 'AdminLogin',
   data() {
     return {
+      email: '',
       password: '',
       error: '',
       loading: false
@@ -40,38 +55,45 @@ export default {
       this.loading = true
       this.error = ''
       
-      // Get admin password from environment variable
-      const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD
-      
-      if (!adminPassword) {
-        this.error = 'Admin password not configured. Please contact administrator.'
-        this.loading = false
-        return
-      }
-      
-      if (this.password === adminPassword) {
-        // Store login state in localStorage
+      try {
+        // Sign in with Firebase Authentication
+        await signInWithEmailAndPassword(auth, this.email, this.password)
+        
+        // Store login state in localStorage (optional, for UI persistence)
         localStorage.setItem('adminLoggedIn', 'true')
         localStorage.setItem('adminLoginTime', Date.now().toString())
         
         // Redirect to admin dashboard
         this.$router.push('/admin/dashboard')
-      } else {
-        this.error = 'Invalid password. Please try again.'
+      } catch (error) {
+        console.error('Login error:', error)
+        
+        // Handle different error codes
+        if (error.code === 'auth/invalid-email') {
+          this.error = 'Invalid email address.'
+        } else if (error.code === 'auth/user-not-found') {
+          this.error = 'No account found with this email.'
+        } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+          this.error = 'Invalid password. Please try again.'
+        } else if (error.code === 'auth/too-many-requests') {
+          this.error = 'Too many failed attempts. Please try again later.'
+        } else {
+          this.error = 'Login failed. Please try again.'
+        }
       }
       
       this.loading = false
+    },
+    
+    logout() {
+      auth.signOut()
+      localStorage.removeItem('adminLoggedIn')
+      localStorage.removeItem('adminLoginTime')
     }
   },
   mounted() {
-    // Check if already logged in
-    const isLoggedIn = localStorage.getItem('adminLoggedIn')
-    const loginTime = localStorage.getItem('adminLoginTime')
-    
-    // Session expires after 24 hours
-    const sessionDuration = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
-    
-    if (isLoggedIn && loginTime && (Date.now() - parseInt(loginTime)) < sessionDuration) {
+    // Check if already logged in with Firebase Auth
+    if (auth.currentUser) {
       this.$router.push('/admin/dashboard')
     }
   }

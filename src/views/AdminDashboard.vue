@@ -377,6 +377,7 @@ import {
   updateCategory,
   deleteCategory
 } from '../firebase/recipeService.js'
+import { auth } from '../firebase/config'
 
 export default {
   name: 'AdminDashboard',
@@ -416,6 +417,7 @@ export default {
   },
   methods: {
     logout() {
+      auth.signOut()
       localStorage.removeItem('adminLoggedIn')
       localStorage.removeItem('adminLoginTime')
       this.$router.push('/admin/login')
@@ -677,12 +679,8 @@ export default {
   },
 
   async mounted() {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem('adminLoggedIn')
-    const loginTime = localStorage.getItem('adminLoginTime')
-    const sessionDuration = 24 * 60 * 60 * 1000 // 24 hours
-
-    if (!isLoggedIn || !loginTime || (Date.now() - parseInt(loginTime)) >= sessionDuration) {
+    // Check if user is logged in with Firebase Auth
+    if (!auth.currentUser) {
       this.$router.push('/admin/login')
       return
     }
