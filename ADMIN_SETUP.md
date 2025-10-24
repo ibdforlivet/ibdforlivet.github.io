@@ -1,42 +1,29 @@
+````markdown
 # Admin Setup Instructions
 
-## Setting up Admin Password
+## 🔐 Admin Access with Firebase Authentication
 
-For security reasons, the admin password is not stored in the code. Instead, it uses environment variables.
+The admin panel is now protected by **Firebase Authentication** for better security.
 
-### Local Development Setup:
+### Setup Instructions:
 
-1. **Copy the environment template:**
-   ```bash
-   cp .env.template .env
-   ```
+See [FIREBASE_AUTH_SETUP.md](FIREBASE_AUTH_SETUP.md) for complete setup instructions.
 
-2. **Edit the .env file:**
-   ```bash
-   VITE_ADMIN_PASSWORD=your-secure-admin-password-here
-   ```
-   Replace `your-secure-admin-password-here` with your desired admin password.
-
-3. **The .env file is automatically ignored by git** and will never be committed to GitHub.
-
-### Production Deployment (GitHub Pages):
-
-For GitHub Pages deployment, you'll need to set the environment variable in your GitHub repository settings:
-
-1. Go to your repository on GitHub
-2. Click **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Name: `VITE_ADMIN_PASSWORD`
-5. Value: Your secure admin password
-6. Click **Add secret**
+**Quick Summary:**
+1. Enable Email/Password authentication in Firebase Console
+2. Create an admin user (email + password)
+3. Update Firestore and Storage security rules
+4. Login at `/admin/login` with your Firebase credentials
 
 ### Security Benefits:
 
-- ✅ Password is never visible in your public code
-- ✅ Each environment can have different passwords
-- ✅ Easy to change without code modifications
-- ✅ Follows security best practices
+- ✅ Industry-standard authentication
+- ✅ Password is never stored in code or environment variables
+- ✅ Automatic session management
+- ✅ Firebase handles all security
+- ✅ 100% free (up to 10,000 users/month)
 
 ### Admin Access:
 
-Once configured, access the admin panel at: `/admin/login`
+Access the admin panel at: https://ibdforlivet.github.io/admin/login
+````
